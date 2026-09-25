@@ -4,23 +4,29 @@ param location string = resourceGroup().location
 
 param resourceName string = 'knff'
 
-param modelDeploymentName string = 'gpt-4o'
+param modelDeploymentName string = 'gpt-5.4'
 
 param modelSkuName string = 'DataZoneStandard'
 
 param modelCapacity int = 20
 
-param modelName string = 'gpt-4o'
+param modelName string = 'gpt-5.4'
 
-param modelVersion string = '2024-05-13'
+param modelVersion string = '2024-11-20'
 
 param skuName string = 'S0'
 
 param logAnaltyicsWorkspaceId string = ''
 
+@secure()
 param bingGroundingKey string = ''
 
 param bingGroundingResourceId string = ''
+
+param appInsightsId string = ''
+
+@secure()
+param appInsightsConnectionString string = ''
 
 // required roleDefinitions for RBAC'ing the AI project to the AI services
 var roleDefinitions = [
@@ -29,7 +35,7 @@ var roleDefinitions = [
   '25fbc0a9-bd7c-42a3-aa1a-3b75d497ee68'
 ]
 
-resource aiServices 'Microsoft.CognitiveServices/accounts@2025-04-01-preview' = {
+resource aiServices 'Microsoft.CognitiveServices/accounts@2025-06-01' = {
   name: '${resourceName}-ais'
   location: location
   sku: {
@@ -48,7 +54,7 @@ resource aiServices 'Microsoft.CognitiveServices/accounts@2025-04-01-preview' = 
   }
 }
 
-resource aiDeployment 'Microsoft.CognitiveServices/accounts/deployments@2025-04-01-preview' = {
+resource aiDeployment 'Microsoft.CognitiveServices/accounts/deployments@2025-06-01' = {
   name: modelDeploymentName
   parent: aiServices
 
@@ -66,7 +72,7 @@ resource aiDeployment 'Microsoft.CognitiveServices/accounts/deployments@2025-04-
   }
 }
 
-resource project 'Microsoft.CognitiveServices/accounts/projects@2025-04-01-preview' = {
+resource project 'Microsoft.CognitiveServices/accounts/projects@2025-06-01' = {
   name: '${resourceName}-project'
   parent: aiServices
   location: location
@@ -79,7 +85,7 @@ resource project 'Microsoft.CognitiveServices/accounts/projects@2025-04-01-previ
   }
 }
 
-resource accountCapabilityHost 'Microsoft.CognitiveServices/accounts/capabilityHosts@2025-04-01-preview' = {
+resource accountCapabilityHost 'Microsoft.CognitiveServices/accounts/capabilityHosts@2025-06-01' = {
    name: '${resourceName}-accountCapabilityHost'
    parent: aiServices
    properties: {
@@ -87,18 +93,16 @@ resource accountCapabilityHost 'Microsoft.CognitiveServices/accounts/capabilityH
    }
 }
 
-resource projectCapabilityHost 'Microsoft.CognitiveServices/accounts/projects/capabilityHosts@2025-04-01-preview' = {
+resource projectCapabilityHost 'Microsoft.CognitiveServices/accounts/projects/capabilityHosts@2025-06-01' = {
   name: '${resourceName}-projectCapabilityHost'
   parent: project
-  properties: {
-    capabilityHostKind: 'Agents'
-  }
+  properties: {}
   dependsOn: [
     accountCapabilityHost
   ]
 }
 
-resource groundingWithBingConnection 'Microsoft.CognitiveServices/accounts/connections@2025-04-01-preview' = if (!empty(bingGroundingKey) && !empty(bingGroundingResourceId)) {
+resource groundingWithBingConnection 'Microsoft.CognitiveServices/accounts/connections@2025-06-01' = if (!empty(bingGroundingKey) && !empty(bingGroundingResourceId)) {
   name: '${resourceName}-bing-grounding'
   parent: aiServices
   properties: {
@@ -113,6 +117,25 @@ resource groundingWithBingConnection 'Microsoft.CognitiveServices/accounts/conne
       ApiType: 'Azure'
       type: 'bing_grounding'
       ResourceId: bingGroundingResourceId
+    }
+  }
+}
+
+resource appInsightsConnection 'Microsoft.CognitiveServices/accounts/connections@2025-06-01' = if (!empty(appInsightsId) && !empty(appInsightsConnectionString)) {
+  name: '${resourceName}-appinsights'
+  parent: aiServices
+  properties: {
+    category: 'AppInsights'
+    target: appInsightsId
+    authType: 'ApiKey'
+    credentials: {
+      key: appInsightsConnectionString
+    }
+    isSharedToAll: true
+    metadata: {
+      ApiType: 'Azure'
+      type: 'app_insights'
+      ResourceId: appInsightsId
     }
   }
 }
@@ -163,3 +186,4 @@ output projectResourceId string = project.id
 output aiHubName string = aiServices.name
 output aiProjectName string = project.name
 output bingGroundingConnectionId string = groundingWithBingConnection.id
+output appInsightsConnectionId string = appInsightsConnection.id
