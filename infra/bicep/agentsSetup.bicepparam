@@ -18,8 +18,8 @@ param addKnowledge = 'aiSearch' // Add knowledge to the AI Agents - 'none', 'gro
 param deployerPrincipalType = 'ServicePrincipal'
 
 // GitHub OIDC federated credential parameters
-param githubOrg = 'arincoau'
-param githubRepo = 'arinco-azure-policy-agents'
+param githubOrg = 'replace-with-org-name'
+param githubRepo = 'replace-with-repo-name'
 param githubEnvironment = 'dev'
 
 // Single foundry configuration - all four specialized agents deployed in one project
